@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { EVIDENCE_FORMULA, type TechEvidence } from "@/lib/evidence"
+import CareerView from "@/components/CareerView"
 import { GitBranch, Zap, Circle, X, ChevronLeft, ChevronRight, Minus, Plus, RotateCw, Code } from "lucide-react"
 
 type RepoLite = { repo_name: string; languages: Record<string, number>; topics: string[]; stars: number }
@@ -112,7 +113,9 @@ export default function GraphView(props: {
   repos: RepoLite[]
   evidence: TechEvidence[]
   onBack: () => void
-  onViewCareer: () => void
+  insight: string | null
+  insightLoading: boolean
+  onInsight: (payload: object) => void
 }) {
   return (
     <ReactFlowProvider>
@@ -127,14 +130,18 @@ function GraphViewInner({
   repos,
   evidence,
   onBack,
-  onViewCareer,
+  insight,
+  insightLoading,
+  onInsight,
 }: {
   username: string
   user: { name: string | null; avatar_url: string | null; public_repos: number; followers: number }
   repos: RepoLite[]
   evidence: TechEvidence[]
   onBack: () => void
-  onViewCareer: () => void
+  insight: string | null
+  insightLoading: boolean
+  onInsight: (payload: object) => void
 }) {
   const [selected, setSelected] = useState<TechEvidence | null>(null)
   const [showLegend, setShowLegend] = useState(true)
@@ -249,10 +256,14 @@ function GraphViewInner({
   const evidenceDist = getEvidenceDistribution(evidence)
   const totalTechs = evidence.length
 
+  const scrollTo = useCallback((id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [])
+
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex min-h-screen bg-background text-foreground">
       {/* Left Sidebar */}
-      <aside className="w-64 shrink-0 border-r border-border bg-card/50 backdrop-blur flex flex-col">
+      <aside className="w-64 shrink-0 border-r border-border bg-card/50 backdrop-blur flex flex-col sticky top-0 h-screen">
         <div className="p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
@@ -263,11 +274,22 @@ function GraphViewInner({
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <Button variant="default" className="w-full justify-start gap-3" onClick={onViewCareer}>
-            <Circle className="w-4 h-4" style={{ fill: "currentColor" }} />
-            Career alignment
-          </Button>
-          <Button variant="ghost" className="w-full justify-start gap-3" onClick={onBack}>
+          <p className="px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Workspace</p>
+          {[
+            { id: "graph", label: "Identity Graph" },
+            { id: "careers", label: "Career alignment" },
+          ].map((item) => (
+            <Button
+              key={item.id}
+              variant="ghost"
+              className="w-full justify-start gap-3 hover:bg-secondary/70 hover:text-foreground transition-colors"
+              onClick={() => scrollTo(item.id)}
+            >
+              <Circle className="w-4 h-4" style={{ fill: "currentColor" }} />
+              {item.label}
+            </Button>
+          ))}
+          <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-secondary/70 transition-colors" onClick={onBack}>
             <ChevronLeft className="w-4 h-4" />
             New analysis
           </Button>
@@ -373,10 +395,18 @@ function GraphViewInner({
             </div>
           )}
         </div>
+
+        {/* Career alignment — embedded section below the graph (same scroll) */}
+        <CareerView
+          evidence={evidence}
+          insight={insight}
+          insightLoading={insightLoading}
+          onInsight={onInsight}
+        />
       </div>
 
       {/* Right Panel */}
-      <aside className="w-80 shrink-0 border-l border-border bg-card/50 backdrop-blur flex flex-col">
+      <aside className="w-80 shrink-0 border-l border-border bg-card/50 backdrop-blur flex flex-col sticky top-0 h-screen">
         <div className="p-4 border-b border-border flex items-center justify-between">
           <h2 className="font-semibold">Evidence Details</h2>
           <Button variant="ghost" size="xs" onClick={() => setSelected(null)}>

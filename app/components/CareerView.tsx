@@ -11,15 +11,14 @@ import type { TechEvidence } from "@/lib/evidence"
 
 const STRONG_EQUIV = 4 // "Strong" bucket level used for the what-if simulation
 
+// Embedded section rendered below the graph canvas on the same scrollable page.
 export default function CareerView({
   evidence,
-  onBack,
   onInsight,
   insight,
   insightLoading,
 }: {
   evidence: TechEvidence[]
-  onBack: () => void
   onInsight: (payload: object) => void
   insight: string | null
   insightLoading: boolean
@@ -40,21 +39,22 @@ export default function CareerView({
   const pct = simulated?.alignmentPct ?? base.alignmentPct
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-card/50 backdrop-blur px-6 py-3 flex items-center gap-4">
-        <Button variant="outline" size="sm" onClick={onBack}>← Graph</Button>
-        <div className="flex gap-2">
-          {CAREERS.map((c, i) => (
-            <Button key={c.name} size="sm" variant={i === careerIdx ? "default" : "outline"} onClick={() => { setCareerIdx(i); setWhatIf(null) }}>
-              {c.name}
-            </Button>
-          ))}
+    <section id="careers" className="border-b border-border px-6 py-8 scroll-mt-4">
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* Career selector — wrapped chips (13 careers) */}
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight mb-3">Career alignment</h2>
+          <div className="flex flex-wrap gap-2">
+            {CAREERS.map((c, i) => (
+              <Button key={c.name} size="sm" variant={i === careerIdx ? "default" : "outline"} onClick={() => { setCareerIdx(i); setWhatIf(null) }}>
+                {c.name}
+              </Button>
+            ))}
+          </div>
         </div>
-      </header>
 
-      <main className="max-w-3xl mx-auto p-6 space-y-6">
         {/* Alignment % + formula tooltip */}
-        <section className="bg-card/50 backdrop-blur rounded-xl border border-border p-6 shadow-elevation">
+        <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-6 shadow-elevation">
           <div className="flex items-baseline gap-3">
             <span className="text-5xl font-bold tracking-tighter">{pct}%</span>
             {simulated && (
@@ -68,19 +68,19 @@ export default function CareerView({
             <summary className="cursor-pointer font-medium text-foreground">How this was calculated</summary>
             <p className="mt-1 leading-relaxed">{ALIGNMENT_FORMULA}</p>
           </details>
-        </section>
+        </div>
 
         {/* What if I learn X */}
         {missingCandidates.length > 0 && (
-          <section className="bg-card/50 backdrop-blur rounded-xl border border-border p-6 shadow-elevation">
-            <h2 className="font-semibold">What if I learn…</h2>
+          <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-6 shadow-elevation">
+            <h3 className="font-semibold">What if I learn…</h3>
             <p className="text-xs text-muted-foreground mb-3">Client-side simulation only — nothing saved. Sets one missing tech to &quot;Strong&quot; and recomputes.</p>
             <div className="flex flex-wrap gap-2">
               {missingCandidates.map((m) => (
                 <button
                   key={m}
                   onClick={() => setWhatIf(whatIf === m ? null : m)}
-                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${whatIf === m ? "bg-primary text-primary-foreground border-primary" : "border-border bg-secondary/50 hover:bg-secondary text-foreground"}`}
+                  className={`rounded-full border px-3 py-1.5 text-sm transition-all duration-150 hover:scale-105 hover:bg-secondary active:scale-95 ${whatIf === m ? "bg-primary text-primary-foreground border-primary shadow-elevation" : "border-border bg-secondary/50 text-foreground"}`}
                 >
                   {m}
                 </button>
@@ -89,11 +89,11 @@ export default function CareerView({
             {simulated && simulated.alignmentPct >= 60 && base.alignmentPct < 60 && (
               <p className="mt-3 text-sm font-medium text-emerald-400">Learning {whatIf} would cross the 60% alignment threshold. 🎯</p>
             )}
-          </section>
+          </div>
         )}
 
         {/* Buckets */}
-        <section className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-3 gap-4">
           <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4 shadow-elevation">
             <Badge variant="default">STRONG EVIDENCE</Badge>
             <ul className="mt-3 space-y-1 text-sm">
@@ -115,12 +115,12 @@ export default function CareerView({
               {base.missing.map((m) => <li key={m.name}>{m.name} <span className="text-muted-foreground">(weight {m.weight})</span></li>)}
             </ul>
           </div>
-        </section>
+        </div>
 
         {/* AI insight - the only free-text AI output */}
-        <section className="bg-card/50 backdrop-blur rounded-xl border border-border p-6 shadow-elevation">
+        <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-6 shadow-elevation">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">AI summary</h2>
+            <h3 className="font-semibold">AI summary</h3>
             <Button size="sm" disabled={insightLoading} onClick={() =>
               onInsight({
                 career: career.name,
@@ -140,12 +140,12 @@ export default function CareerView({
           ) : (
             <p className="text-sm text-muted-foreground">Generate a 2–3 sentence summary from your computed evidence. Everything above stays deterministic regardless.</p>
           )}
-        </section>
+        </div>
 
         <p className="text-[11px] text-muted-foreground">
           Career requirements are static seed data (weights shown per item). Evidence levels map from buckets: {Object.entries(BUCKET_LEVEL).map(([k, v]) => `${k}=${v}`).join(" · ")}
         </p>
-      </main>
-    </div>
+      </div>
+    </section>
   )
 }

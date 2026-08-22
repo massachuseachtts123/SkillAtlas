@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import GraphView from "@/components/GraphView"
-import CareerView from "@/components/CareerView"
 import type { TechEvidence } from "@/lib/evidence"
 import { Zap } from "lucide-react"
 
@@ -23,7 +22,7 @@ const STAGES = [
   "Building your Technical Identity Graph…",
 ]
 
-type View = "landing" | "loading" | "graph" | "career"
+type View = "landing" | "loading" | "graph"
 
 export default function Home() {
   const [view, setView] = useState<View>("landing")
@@ -88,23 +87,17 @@ export default function Home() {
     }
   }
 
-  if ((view === "graph" || view === "career") && result) {
-    return view === "graph" ? (
+  if (view === "graph" && result) {
+    return (
       <GraphView
         username={username.trim()}
         user={result.user}
         repos={result.repos}
         evidence={result.evidence}
         onBack={() => { setView("landing"); setResult(null); setInsight(null) }}
-        onViewCareer={() => setView("career")}
-      />
-    ) : (
-      <CareerView
-        evidence={result.evidence}
         insight={insight}
         insightLoading={insightLoading}
         onInsight={generateInsight}
-        onBack={() => setView("graph")}
       />
     )
   }
