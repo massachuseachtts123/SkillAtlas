@@ -40,8 +40,8 @@ export default function CareerView({
   const pct = simulated?.alignmentPct ?? base.alignmentPct
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="border-b bg-white px-6 py-3 flex items-center gap-4">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-border bg-card/50 backdrop-blur px-6 py-3 flex items-center gap-4">
         <Button variant="outline" size="sm" onClick={onBack}>← Graph</Button>
         <div className="flex gap-2">
           {CAREERS.map((c, i) => (
@@ -54,71 +54,71 @@ export default function CareerView({
 
       <main className="max-w-3xl mx-auto p-6 space-y-6">
         {/* Alignment % + formula tooltip */}
-        <section className="bg-white rounded-xl border p-6">
+        <section className="bg-card/50 backdrop-blur rounded-xl border border-border p-6 shadow-elevation">
           <div className="flex items-baseline gap-3">
             <span className="text-5xl font-bold tracking-tighter">{pct}%</span>
             {simulated && (
-              <span className={`text-sm font-medium ${pct > base.alignmentPct ? "text-green-700" : ""}`}>
+              <span className={`text-sm font-medium ${pct > base.alignmentPct ? "text-emerald-400" : ""}`}>
                 {base.alignmentPct}% → {pct}%
               </span>
             )}
-            <span className="text-sm text-neutral-500">alignment with {career.name}</span>
+            <span className="text-sm text-muted-foreground">alignment with {career.name}</span>
           </div>
-          <details className="mt-2 text-xs text-neutral-600">
-            <summary className="cursor-pointer font-medium">How this was calculated</summary>
+          <details className="mt-2 text-xs text-muted-foreground">
+            <summary className="cursor-pointer font-medium text-foreground">How this was calculated</summary>
             <p className="mt-1 leading-relaxed">{ALIGNMENT_FORMULA}</p>
           </details>
         </section>
 
         {/* What if I learn X */}
         {missingCandidates.length > 0 && (
-          <section className="bg-white rounded-xl border p-6">
+          <section className="bg-card/50 backdrop-blur rounded-xl border border-border p-6 shadow-elevation">
             <h2 className="font-semibold">What if I learn…</h2>
-            <p className="text-xs text-neutral-500 mb-3">Client-side simulation only — nothing saved. Sets one missing tech to &quot;Strong&quot; and recomputes.</p>
+            <p className="text-xs text-muted-foreground mb-3">Client-side simulation only — nothing saved. Sets one missing tech to &quot;Strong&quot; and recomputes.</p>
             <div className="flex flex-wrap gap-2">
               {missingCandidates.map((m) => (
                 <button
                   key={m}
                   onClick={() => setWhatIf(whatIf === m ? null : m)}
-                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${whatIf === m ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-neutral-100"}`}
+                  className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${whatIf === m ? "bg-primary text-primary-foreground border-primary" : "border-border bg-secondary/50 hover:bg-secondary text-foreground"}`}
                 >
                   {m}
                 </button>
               ))}
             </div>
             {simulated && simulated.alignmentPct >= 60 && base.alignmentPct < 60 && (
-              <p className="mt-3 text-sm font-medium text-green-700">Learning {whatIf} would cross the 60% alignment threshold. 🎯</p>
+              <p className="mt-3 text-sm font-medium text-emerald-400">Learning {whatIf} would cross the 60% alignment threshold. 🎯</p>
             )}
           </section>
         )}
 
         {/* Buckets */}
         <section className="grid md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4 shadow-elevation">
             <Badge variant="default">STRONG EVIDENCE</Badge>
             <ul className="mt-3 space-y-1 text-sm">
-              {base.strong.length === 0 && <li className="text-neutral-400">None yet</li>}
-              {base.strong.map((s) => <li key={s.name}>{s.name} <span className="text-neutral-400">(lvl {s.level}/{s.weight})</span></li>)}
+              {base.strong.length === 0 && <li className="text-muted-foreground">None yet</li>}
+              {base.strong.map((s) => <li key={s.name}>{s.name} <span className="text-muted-foreground">(lvl {s.level}/{s.weight})</span></li>)}
             </ul>
           </div>
-          <div className="bg-white rounded-xl border p-4">
+          <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4 shadow-elevation">
             <Badge variant="secondary">DEVELOPING</Badge>
             <ul className="mt-3 space-y-1 text-sm">
-              {base.developing.length === 0 && <li className="text-neutral-400">None yet</li>}
-              {base.developing.map((s) => <li key={s.name}>{s.name} <span className="text-neutral-400">(lvl {s.level}/{s.weight})</span></li>)}
+              {base.developing.length === 0 && <li className="text-muted-foreground">None yet</li>}
+              {base.developing.map((s) => <li key={s.name}>{s.name} <span className="text-muted-foreground">(lvl {s.level}/{s.weight})</span></li>)}
             </ul>
           </div>
-          <div className="bg-white rounded-xl border p-4">
-            <Badge variant="outline" className="border-red-300 text-red-700">MISSING</Badge>
+          <div className="bg-card/50 backdrop-blur rounded-xl border border-border p-4 shadow-elevation">
+            <Badge variant="destructive">MISSING</Badge>
             <ul className="mt-3 space-y-1 text-sm">
-              {base.missing.length === 0 && <li className="text-neutral-400">Nothing missing</li>}
-              {base.missing.map((m) => <li key={m.name}>{m.name} <span className="text-neutral-400">(weight {m.weight})</span></li>)}
+              {base.missing.length === 0 && <li className="text-muted-foreground">Nothing missing</li>}
+              {base.missing.map((m) => <li key={m.name}>{m.name} <span className="text-muted-foreground">(weight {m.weight})</span></li>)}
             </ul>
           </div>
         </section>
 
         {/* AI insight - the only free-text AI output */}
-        <section className="bg-white rounded-xl border p-6">
+        <section className="bg-card/50 backdrop-blur rounded-xl border border-border p-6 shadow-elevation">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">AI summary</h2>
             <Button size="sm" disabled={insightLoading} onClick={() =>
@@ -138,11 +138,11 @@ export default function CareerView({
           {insight ? (
             <p className="text-sm leading-relaxed">{insight}</p>
           ) : (
-            <p className="text-sm text-neutral-500">Generate a 2–3 sentence summary from your computed evidence. Everything above stays deterministic regardless.</p>
+            <p className="text-sm text-muted-foreground">Generate a 2–3 sentence summary from your computed evidence. Everything above stays deterministic regardless.</p>
           )}
         </section>
 
-        <p className="text-[11px] text-neutral-400">
+        <p className="text-[11px] text-muted-foreground">
           Career requirements are static seed data (weights shown per item). Evidence levels map from buckets: {Object.entries(BUCKET_LEVEL).map(([k, v]) => `${k}=${v}`).join(" · ")}
         </p>
       </main>

@@ -6,6 +6,8 @@ import {
   ReactFlowProvider,
   Background,
   Controls,
+  Handle,
+  Position,
   type Node,
   type Edge,
   type NodeMouseHandler,
@@ -38,6 +40,51 @@ const BUCKET_LABEL: Record<TechEvidence["bucket"], string> = {
 
 function norm(s: string) { return s.trim().toLowerCase() }
 
+// Custom node renderers. Without these registered on <ReactFlow nodeTypes={...}>,
+// nodes with type "developer" | "technology" | "repo" silently fall back to React
+// Flow's default node, which only reads `data.label` — so tech bubbles and repo
+// pills would render with no text at all, and the user node with no avatar.
+function DeveloperNode({ data }: { data: { label: string; name: string; avatar: string | null } }) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+      <div className="h-16 w-16 overflow-hidden rounded-full ring-4 ring-primary/30 shadow-elevation">
+        {data.avatar ? (
+          <img src={data.avatar} alt={data.name} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-primary/20 text-lg font-bold text-primary">
+            {data.label.replace("@", "").charAt(0).toUpperCase()}
+          </div>
+        )}
+      </div>
+      <div className="whitespace-nowrap rounded-full border border-border bg-card/95 px-3 py-1 text-xs font-semibold text-foreground shadow-elevation">
+        {data.label}
+      </div>
+    </div>
+  )
+}
+
+function TechnologyNode({ data }: { data: { name: string; bucket: TechEvidence["bucket"]; rawScore: number } }) {
+  return (
+    <div className="flex h-full w-full items-center justify-center rounded-full px-1 text-center">
+      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+      <span className="text-[11px] font-semibold leading-tight text-white drop-shadow-sm">{data.name}</span>
+    </div>
+  )
+}
+
+function RepoNode({ data }: { data: { name: string; stars: number } }) {
+  return (
+    <div className="flex h-full w-full items-center justify-center">
+      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+      <span className="truncate">{data.name}</span>
+    </div>
+  )
+}
+
+const nodeTypes = { developer: DeveloperNode, technology: TechnologyNode, repo: RepoNode }
+
 function formatTimestamp(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
 }
@@ -59,7 +106,22 @@ function getEvidenceDistribution(evidence: TechEvidence[]) {
   return dist
 }
 
-export default function GraphView({
+export default function GraphView(props: {
+  username: string
+  user: { name: string | null; avatar_url: string | null; public_repos: number; followers: number }
+  repos: RepoLite[]
+  evidence: TechEvidence[]
+  onBack: () => void
+  onViewCareer: () => void
+}) {
+  return (
+    <ReactFlowProvider>
+      <GraphViewInner {...props} />
+    </ReactFlowProvider>
+  )
+}
+
+function GraphViewInner({
   username,
   user,
   repos,
@@ -257,60 +319,59 @@ export default function GraphView({
 
         {/* Graph Canvas */}
         <div className="flex-1 relative min-h-0" ref={reactFlowWrapper}>
-          <ReactFlowProvider>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              fitView={false}
-              minZoom={0.15}
-              maxZoom={2}
-              onNodeClick={onTechClick}
-              proOptions={{ hideAttribution: true }}
-              className="h-full w-full"
-            >
-              <Background
-                variant={BackgroundVariant.Dots}
-                gap={28}
-                size={1}
-                color="rgba(255,255,255,0.02)"
-              />
-              <Controls
-                showZoom={true}
-                showFitView={true}
-                showInteractive={false}
-                position="bottom-right"
-              />
-            </ReactFlow>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            fitView={false}
+            minZoom={0.15}
+            maxZoom={2}
+            onNodeClick={onTechClick}
+            proOptions={{ hideAttribution: true }}
+            className="h-full w-full"
+          >
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={28}
+              size={1}
+              color="rgba(255,255,255,0.02)"
+            />
+            <Controls
+              showZoom={true}
+              showFitView={true}
+              showInteractive={false}
+              position="bottom-right"
+            />
+          </ReactFlow>
 
-            {/* Legend */}
-            {showLegend && (
-              <div className="absolute bottom-4 left-4 z-10 bg-card/95 backdrop-blur border border-border rounded-xl p-3 shadow-elevation">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Evidence Strength</span>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    className="p-0 h-5 w-5"
-                    onClick={() => setShowLegend(false)}
-                    aria-label="Hide legend"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {(["Very Strong", "Strong", "Moderate", "Weak"] as TechEvidence["bucket"][]).map((bucket) => (
-                    <div key={bucket} className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: BUCKET_COLOR[bucket] }}
-                      />
-                      <span className="text-xs text-foreground">{BUCKET_LABEL[bucket]}</span>
-                    </div>
-                  ))}
-                </div>
+          {/* Legend */}
+          {showLegend && (
+            <div className="absolute bottom-4 left-4 z-10 bg-card/95 backdrop-blur border border-border rounded-xl p-3 shadow-elevation">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Evidence Strength</span>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="p-0 h-5 w-5"
+                  onClick={() => setShowLegend(false)}
+                  aria-label="Hide legend"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </Button>
               </div>
-            )}
-          </ReactFlowProvider>
+              <div className="flex flex-col gap-1.5">
+                {(["Very Strong", "Strong", "Moderate", "Weak"] as TechEvidence["bucket"][]).map((bucket) => (
+                  <div key={bucket} className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: BUCKET_COLOR[bucket] }}
+                    />
+                    <span className="text-xs text-foreground">{BUCKET_LABEL[bucket]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
