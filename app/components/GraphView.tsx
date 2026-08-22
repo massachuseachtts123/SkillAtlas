@@ -157,11 +157,11 @@ function GraphViewInner({
     const cols = Math.min(top.length, 6)
     top.forEach((t, i) => {
       const id = `tech-${norm(t.name)}`
-      const size = Math.max(40, 48 + t.rawScore * 6)
+      const size = Math.max(32, 38 + t.rawScore * 4)
       nodes.push({
         id,
         type: "technology",
-        position: { x: (i % cols) * 180, y: 180 + Math.floor(i / cols) * 140 },
+        position: { x: (i % cols) * 160, y: 160 + Math.floor(i / cols) * 130 },
         data: { name: t.name, bucket: t.bucket, rawScore: t.rawScore },
         style: {
           width: size,
@@ -317,8 +317,8 @@ function GraphViewInner({
           <EvidenceDist dist={evidenceDist} />
         </section>
 
-        {/* Graph Canvas */}
-        <div className="flex-1 relative min-h-0" ref={reactFlowWrapper}>
+        {/* Graph Canvas — capped so it doesn't dominate the page */}
+        <div id="graph" className="relative h-[480px] max-h-[480px] shrink-0 border-b border-border" ref={reactFlowWrapper}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
