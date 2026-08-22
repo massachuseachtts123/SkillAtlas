@@ -23,6 +23,7 @@ import { EVIDENCE_FORMULA, type TechEvidence } from "@/lib/evidence"
 import CareerView from "@/components/CareerView"
 import JobsSection from "@/components/JobsSection"
 import MarketSection from "@/components/MarketSection"
+import ProfileSection from "@/components/ProfileSection"
 import { GitBranch, Zap, Circle, X, ChevronLeft, ChevronRight, Minus, Plus, RotateCw, Code } from "lucide-react"
 
 type RepoLite = { repo_name: string; languages: Record<string, number>; topics: string[]; stars: number }
@@ -282,6 +283,7 @@ function GraphViewInner({
             { id: "careers", label: "Career alignment" },
             { id: "jobs", label: "Jobs & internships" },
             { id: "market", label: "Market insights" },
+            { id: "profile", label: "Profile" },
           ].map((item) => (
             <Button
               key={item.id}
@@ -411,6 +413,8 @@ function GraphViewInner({
         <JobsSection />
 
         <MarketSection />
+
+        <ProfileSection username={username} />
       </div>
 
       {/* Right Panel */}
