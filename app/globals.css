@@ -70,4 +70,12 @@
   .shadow-elevation-hover {
     box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
   }
+  .animate-progress-shimmer {
+    animation: progress-shimmer 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes progress-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
 }

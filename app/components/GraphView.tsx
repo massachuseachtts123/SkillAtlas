@@ -70,7 +70,7 @@ function DeveloperNode({ data }: { data: { label: string; name: string; avatar: 
 
 function TechnologyNode({ data }: { data: { name: string; bucket: TechEvidence["bucket"]; rawScore: number } }) {
   return (
-    <div className="flex h-full w-full items-center justify-center rounded-full px-1 text-center">
+    <div className="flex h-full w-full items-center justify-center rounded-full px-1 text-center transition-transform duration-200 hover:scale-110 cursor-pointer">
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
       <span className="text-[11px] font-semibold leading-tight text-white drop-shadow-sm">{data.name}</span>
     </div>
@@ -79,7 +79,7 @@ function TechnologyNode({ data }: { data: { name: string; bucket: TechEvidence["
 
 function RepoNode({ data }: { data: { name: string; stars: number } }) {
   return (
-    <div className="flex h-full w-full items-center justify-center">
+    <div className="flex h-full w-full items-center justify-center rounded-lg transition-all duration-200 hover:scale-105 hover:border-ring/50 cursor-pointer">
       <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
       <span className="truncate">{data.name}</span>

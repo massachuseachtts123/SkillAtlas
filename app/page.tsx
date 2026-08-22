@@ -153,14 +153,20 @@ export default function Home() {
         </form>
 
         {view === "loading" && (
-          <ol className="mt-6 space-y-2 text-sm" aria-live="polite">
-            {STAGES.map((s, i) => (
-              <li key={s} className={`flex items-center gap-2 ${i <= stage ? "text-foreground" : "text-muted-foreground"}`}>
-                <span className={`inline-block h-2 w-2 rounded-full ${i < stage ? "bg-primary" : i === stage ? "bg-primary animate-pulse" : "bg-muted"}`} />
-                {s}
-              </li>
-            ))}
-          </ol>
+          <div className="mt-6">
+            {/* Indeterminate shimmer bar — pairs with the stage ticker below */}
+            <div className="h-1 rounded-full bg-secondary overflow-hidden" aria-hidden="true">
+              <div className="h-full w-1/3 rounded-full bg-primary animate-progress-shimmer" />
+            </div>
+            <ol className="mt-4 space-y-2 text-sm" aria-live="polite">
+              {STAGES.map((s, i) => (
+                <li key={s} className={`flex items-center gap-2 ${i <= stage ? "text-foreground" : "text-muted-foreground"}`}>
+                  <span className={`inline-block h-2 w-2 rounded-full ${i < stage ? "bg-primary" : i === stage ? "bg-primary animate-pulse" : "bg-muted"}`} />
+                  {s}
+                </li>
+              ))}
+            </ol>
+          </div>
         )}
 
         {error && (
