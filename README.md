@@ -31,7 +31,7 @@ cp .env.example .env.local
 ```
 
 - `GITHUB_TOKEN` — raises API limit from 60/hr to 5000/hr
-- `OPENAI_API_KEY` or `GEMINI_API_KEY` — enables AI extraction of skills hidden in READMEs/descriptions + AI career insight summary (tagged `AI-INFERRED`, never mixed into verified evidence)
+- `GEMINI_API_KEY` — single LLM provider (Gemini, free tier works; model `gemini-2.0-flash`). Enables AI extraction of skills hidden in READMEs/descriptions + AI career insight summary (tagged `AI-INFERRED`, never mixed into verified evidence). Free-tier rate limits apply — the app degrades gracefully on 429.
 - Supabase vars — persistence layer (schema in `sql/schema.sql`); demo runs fine without it
 
 ## Stack

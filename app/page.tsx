@@ -73,7 +73,13 @@ export default function Home() {
       setInsight(
         res.ok && data.success
           ? data.insight
-          : `AI summary unavailable (${data.error === "no-llm-key" ? "no API key configured" : "LLM call failed"}). All scores above remain fully computed and valid.`
+          : `AI summary unavailable (${
+              data.error === "no-llm-key"
+                ? "no API key configured"
+                : data.error === "llm-rate-limited"
+                  ? "free-tier rate limit hit, try again shortly"
+                  : "LLM call failed"
+            }). All scores above remain fully computed and valid.`
       )
     } catch {
       setInsight("AI summary unavailable (network error). All scores above remain fully computed and valid.")

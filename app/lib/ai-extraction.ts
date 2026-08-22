@@ -45,32 +45,9 @@ function extractJson(text: string): unknown {
   }
 }
 
-async function callOpenAI(repo: RepoInput): Promise<string> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: EXTRACTION_PROMPT },
-        {
-          role: 'user',
-          content: `Repo: ${repo.repo_name}\nDescription: ${repo.description ?? '(none)'}\nREADME excerpt: ${repo.readme_summary || '(none)'}`,
-        },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0,
-    }),
-    signal: AbortSignal.timeout(15000),
-  })
-  if (!res.ok) throw new Error(`OpenAI ${res.status}`)
-  const data = await res.json()
-  return data.choices?.[0]?.message?.content ?? ''
-}
-
+// Gemini only (single provider). gemini-2.0-flash is on Gemini's free tier,
+// which has its own rate limits (requests per minute / per day) — callers must
+// degrade gracefully on HTTP 429 just like on a missing key.
 async function callGemini(repo: RepoInput): Promise<string> {
   const model = 'gemini-2.0-flash'
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`
@@ -98,17 +75,14 @@ async function callGemini(repo: RepoInput): Promise<string> {
 }
 
 export function llmAvailable(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY)
+  return Boolean(process.env.GEMINI_API_KEY)
 }
 
 // Returns null on ANY failure -> caller degrades to VERIFIED-only data.
 export async function extractFromRepo(repo: RepoInput): Promise<ExtractionResult | null> {
   if (!llmAvailable()) return null
   try {
-    const text =
-      process.env.OPENAI_API_KEY
-        ? await callOpenAI(repo)
-        : await callGemini(repo)
+    const text = await callGemini(repo)
     if (!text) return null
     return validateExtraction(extractJson(text))
   } catch {
