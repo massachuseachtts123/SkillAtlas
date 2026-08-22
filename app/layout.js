@@ -9,8 +9,8 @@ export default function RootLayout({
   children
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-background">{children}</body>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className="bg-background" suppressHydrationWarning>{children}</body>
     </html>
   )
 }
