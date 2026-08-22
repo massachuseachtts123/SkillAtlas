@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import GraphView from "@/components/GraphView"
+import LoginGate from "@/components/LoginGate"
 import type { TechEvidence } from "@/lib/evidence"
 import { Zap } from "lucide-react"
 
@@ -25,6 +26,8 @@ const STAGES = [
 type View = "landing" | "loading" | "graph"
 
 export default function Home() {
+  // null = still checking sessionStorage (avoids login flash on refresh)
+  const [authed, setAuthed] = useState<boolean | null>(null)
   const [view, setView] = useState<View>("landing")
   const [username, setUsername] = useState("")
   const [stage, setStage] = useState(0)
@@ -35,8 +38,19 @@ export default function Home() {
   const usernameRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    try { setAuthed(sessionStorage.getItem("skillatlas-auth") === "1") } catch { setAuthed(false) }
+  }, [])
+
+  useEffect(() => {
     if (view === "landing") usernameRef.current?.focus()
   }, [view])
+
+  if (authed !== true) {
+    if (authed === null) {
+      return <main className="min-h-screen bg-background" />
+    }
+    return <LoginGate onLogin={() => setAuthed(true)} />
+  }
 
   async function analyze(e?: React.FormEvent) {
     e?.preventDefault()
