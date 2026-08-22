@@ -1,0 +1,43 @@
+# --- Sensitive: never commit real credentials ---
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+.env.test
+*.pem
+*.key
+supabase/.temp/
+
+# --- Dependencies ---
+node_modules/
+.pnp
+.pnp.js
+
+# --- Next.js build output ---
+.next/
+out/
+build/
+.vercel
+
+# --- TypeScript ---
+*.tsbuildinfo
+next-env.d.ts
+
+# --- Logs / debug ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# --- Local test/dev artifacts ---
+.playwright-mcp/
+coverage/
