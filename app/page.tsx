@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import GraphView from "@/components/GraphView"
 import CareerView from "@/components/CareerView"
 import type { TechEvidence } from "@/lib/evidence"
+import { Zap } from "lucide-react"
 
 type AnalysisResult = {
   aiUsed: boolean
@@ -32,6 +33,11 @@ export default function Home() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [insight, setInsight] = useState<string | null>(null)
   const [insightLoading, setInsightLoading] = useState(false)
+  const usernameRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (view === "landing") usernameRef.current?.focus()
+  }, [view])
 
   async function analyze(e?: React.FormEvent) {
     e?.preventDefault()
@@ -98,22 +104,26 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
+    <main className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
       <div className="w-full max-w-md">
+        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20">
+          <Zap className="h-5 w-5 text-primary" />
+        </div>
+
         <div className="flex items-center gap-2 mb-2">
           <Badge variant="secondary">evidence-backed</Badge>
           <Badge variant="secondary">deterministic scoring</Badge>
         </div>
-        <h1 className="text-4xl font-bold tracking-tighter text-neutral-900 text-balance">
+        <h1 className="text-4xl font-bold tracking-tighter text-balance">
           SkillAtlas
         </h1>
-        <p className="mt-3 text-neutral-600 leading-relaxed">
+        <p className="mt-3 text-muted-foreground leading-relaxed">
           Turn any GitHub profile into a Technical Identity Graph and see how it aligns
           with real career paths. Every score shows its math.
         </p>
 
         <form onSubmit={analyze} className="mt-8 space-y-3">
-          <label htmlFor="gh-user" className="block text-sm font-medium text-neutral-800">
+          <label htmlFor="gh-user" className="block text-sm font-medium">
             GitHub username
           </label>
           <input
@@ -121,8 +131,8 @@ export default function Home() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="e.g. torvalds, octocat"
-            autoFocus
-            className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            ref={usernameRef}
+            className="w-full rounded-lg border border-border bg-input/30 px-3 py-2.5 text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-3 focus:ring-ring/50"
           />
           <Button type="submit" disabled={!username.trim() || view === "loading"} className="w-full">
             {view === "loading" ? "Analyzing…" : "Analyze"}
@@ -132,8 +142,8 @@ export default function Home() {
         {view === "loading" && (
           <ol className="mt-6 space-y-2 text-sm" aria-live="polite">
             {STAGES.map((s, i) => (
-              <li key={s} className={`flex items-center gap-2 ${i <= stage ? "text-neutral-900" : "text-neutral-400"}`}>
-                <span className={`inline-block h-2 w-2 rounded-full ${i < stage ? "bg-green-600" : i === stage ? "bg-blue-600 animate-pulse" : "bg-neutral-300"}`} />
+              <li key={s} className={`flex items-center gap-2 ${i <= stage ? "text-foreground" : "text-muted-foreground"}`}>
+                <span className={`inline-block h-2 w-2 rounded-full ${i < stage ? "bg-primary" : i === stage ? "bg-primary animate-pulse" : "bg-muted"}`} />
                 {s}
               </li>
             ))}
@@ -141,7 +151,7 @@ export default function Home() {
         )}
 
         {error && (
-          <p role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         )}
