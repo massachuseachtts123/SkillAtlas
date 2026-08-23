@@ -7,6 +7,7 @@ import AtlasGraph from "@/components/AtlasGraph"
 import DetailPanel from "@/components/DetailPanel"
 import CareerView from "@/components/CareerView"
 import LoginGate from "@/components/LoginGate"
+import { useTheme } from "@/components/ThemeProvider"
 import {
   ProjectsView, LearningView, TechnologiesView, AchievementsView,
   ProfileView, IntegrationsView,
@@ -19,7 +20,7 @@ import { DEMO_PROFILE, PROJECTS, ACHIEVEMENTS } from "@/lib/demoData"
 import { DEMO_GITHUB } from "@/lib/demoGithub"
 import {
   Map as MapIcon, FolderKanban, GraduationCap, Cpu, Trophy, Compass,
-  Plug, UserRound, Search, Zap, Sparkles, ArrowRight,
+  Plug, UserRound, Search, Zap, Sparkles, ArrowRight, Sun, Moon,
 } from "lucide-react"
 
 type Tab = "atlas" | "projects" | "learning" | "technologies" | "achievements" | "career" | "integrations" | "profile"
@@ -42,6 +43,7 @@ const TARGET_CAREER = CAREERS.find((c) => c.name === "Full Stack Developer") ?? 
 const TARGET_CAREER_LABEL = "Junior Full Stack Developer"
 
 export default function Home() {
+  const { theme, toggleTheme } = useTheme()
   const [authed, setAuthed] = useState<boolean | null>(null)
 
   const [tab, setTab] = useState<Tab>("atlas")
@@ -162,6 +164,17 @@ export default function Home() {
               </Button>
             ))}
           </nav>
+
+          {/* Theme toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
 
           <form role="search" onSubmit={runSearch} className="relative ml-auto w-full max-w-sm">
             <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
