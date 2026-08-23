@@ -7,6 +7,7 @@ import AtlasGraph from "@/components/AtlasGraph"
 import DetailPanel from "@/components/DetailPanel"
 import CareerView from "@/components/CareerView"
 import LoginGate from "@/components/LoginGate"
+import AskAiView from "@/components/AskAiView"
 import { useTheme } from "@/components/ThemeProvider"
 import {
   ProjectsView, LearningView, TechnologiesView, AchievementsView,
@@ -15,18 +16,18 @@ import {
 import { computeEvidence } from "@/lib/evidence"
 import { CAREERS, computeAlignment, rankNextSkills, newlyUnlockedCareers } from "@/lib/careers"
 import { buildAtlas } from "@/lib/atlas"
-import { answerQuery, type SearchAnswer } from "@/lib/search"
 import { DEMO_PROFILE, PROJECTS, ACHIEVEMENTS } from "@/lib/demoData"
 import { DEMO_GITHUB } from "@/lib/demoGithub"
 import {
   Map as MapIcon, FolderKanban, GraduationCap, Cpu, Trophy, Compass,
-  Plug, UserRound, Search, Zap, Sparkles, ArrowRight, Sun, Moon,
+  Plug, UserRound, Zap, Sparkles, ArrowRight, Sun, Moon, BotMessageSquare,
 } from "lucide-react"
 
-type Tab = "atlas" | "projects" | "learning" | "technologies" | "achievements" | "career" | "integrations" | "profile"
+type Tab = "atlas" | "askai" | "projects" | "learning" | "technologies" | "achievements" | "career" | "integrations" | "profile"
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "atlas", label: "Atlas", icon: <MapIcon className="h-4 w-4" /> },
+  { id: "askai", label: "Ask AI", icon: <BotMessageSquare className="h-4 w-4" /> },
   { id: "projects", label: "Projects", icon: <FolderKanban className="h-4 w-4" /> },
   { id: "learning", label: "Learning", icon: <GraduationCap className="h-4 w-4" /> },
   { id: "technologies", label: "Technologies", icon: <Cpu className="h-4 w-4" /> },
@@ -54,9 +55,6 @@ export default function Home() {
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [recenterKey, setRecenterKey] = useState(0)
-
-  const [query, setQuery] = useState("")
-  const [answer, setAnswer] = useState<SearchAnswer | null>(null)
 
   useEffect(() => {
     try { setAuthed(sessionStorage.getItem("skillatlas-auth") === "1") } catch { setAuthed(false) }
@@ -110,17 +108,6 @@ export default function Home() {
   // No marketing/landing page between login and the product — you're always
   // looking at the real dashboard from the first frame after signing in.
 
-  function runSearch(e?: React.FormEvent) {
-    e?.preventDefault()
-    if (!query.trim()) return
-    setAnswer(answerQuery(query.trim(), evidence))
-  }
-  function goToAnswerTab(a: SearchAnswer) {
-    if (a.targetTab) setTab(a.targetTab)
-    setAnswer(null)
-    setQuery("")
-  }
-
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar */}
@@ -158,7 +145,7 @@ export default function Home() {
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card/40 px-4 backdrop-blur md:px-6">
           {/* Mobile nav */}
           <nav aria-label="Mobile navigation" className="flex gap-1 overflow-x-auto md:hidden">
-            {TABS.filter((t) => ["atlas", "career", "integrations"].includes(t.id)).map((t) => (
+            {TABS.filter((t) => ["atlas", "askai", "career", "profile"].includes(t.id)).map((t) => (
               <Button key={t.id} size="sm" variant={tab === t.id ? "secondary" : "ghost"} onClick={() => setTab(t.id)}>
                 {t.label}
               </Button>
@@ -175,29 +162,6 @@ export default function Home() {
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
-
-          <form role="search" onSubmit={runSearch} className="relative ml-auto w-full max-w-sm">
-            <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              aria-label="Search your Atlas"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Where did I use React?"
-              className="w-full rounded-lg border border-border bg-input/30 py-1.5 pl-8 pr-3 text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-3 focus:ring-ring/50"
-            />
-            {answer && (
-              <div role="status" className="absolute right-0 top-full z-40 mt-2 w-[min(28rem,80vw)] rounded-xl border border-border bg-card p-4 shadow-elevation">
-                <p className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">{answer.question}</p>
-                <div className="space-y-1.5 text-sm leading-relaxed">
-                  {answer.lines.map((l, i) => <p key={i}>{l}</p>)}
-                </div>
-                <div className="mt-3 flex gap-2">
-                  {answer.targetTab && <Button size="sm" onClick={() => goToAnswerTab(answer)}>Open</Button>}
-                  <Button size="sm" variant="ghost" onClick={() => { setAnswer(null); setQuery("") }}>Dismiss</Button>
-                </div>
-              </div>
-            )}
-          </form>
         </header>
 
         {/* Content */}
@@ -250,6 +214,7 @@ export default function Home() {
           </div>
         ) : (
           <main className="min-w-0 flex-1 overflow-y-auto p-6">
+            {tab === "askai" && <AskAiView evidence={evidence} state={state} />}
             {tab === "projects" && <ProjectsView githubConnected={githubConnected} />}
             {tab === "learning" && <LearningView />}
             {tab === "technologies" && <TechnologiesView evidence={evidence} githubConnected={githubConnected} />}
