@@ -11,7 +11,7 @@ import AskAiView from "@/components/AskAiView"
 import { useTheme } from "@/components/ThemeProvider"
 import {
   ProjectsView, LearningView, TechnologiesView, AchievementsView,
-  ProfileView, IntegrationsView,
+  ProfileView, IntegrationsView, CVView,
 } from "@/components/sections"
 import { computeEvidence } from "@/lib/evidence"
 import { CAREERS, computeAlignment, rankNextSkills, newlyUnlockedCareers } from "@/lib/careers"
@@ -20,10 +20,10 @@ import { DEMO_PROFILE, PROJECTS, ACHIEVEMENTS } from "@/lib/demoData"
 import { DEMO_GITHUB } from "@/lib/demoGithub"
 import {
   Map as MapIcon, FolderKanban, GraduationCap, Cpu, Trophy, Compass,
-  Plug, UserRound, Zap, Sparkles, ArrowRight, Sun, Moon, BotMessageSquare,
+  Plug, UserRound, Zap, Sparkles, ArrowRight, Sun, Moon, BotMessageSquare, FileText,
 } from "lucide-react"
 
-type Tab = "atlas" | "askai" | "projects" | "learning" | "technologies" | "achievements" | "career" | "integrations" | "profile"
+type Tab = "atlas" | "askai" | "projects" | "learning" | "technologies" | "achievements" | "career" | "integrations" | "profile" | "cv"
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "atlas", label: "Atlas", icon: <MapIcon className="h-4 w-4" /> },
@@ -35,6 +35,7 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "career", label: "Career", icon: <Compass className="h-4 w-4" /> },
   { id: "integrations", label: "Integrations", icon: <Plug className="h-4 w-4" /> },
   { id: "profile", label: "Profile", icon: <UserRound className="h-4 w-4" /> },
+  { id: "cv", label: "CV", icon: <FileText className="h-4 w-4" /> },
 ]
 
 // Target career shown on the compact intelligence card + top stat strip.
@@ -232,6 +233,7 @@ export default function Home() {
               <IntegrationsView state={state} onConnectGithub={connectGithub} onConnectLinkedin={connectLinkedin} />
             )}
             {tab === "profile" && <ProfileView />}
+            {tab === "cv" && <CVView evidence={evidence} />}
           </main>
         )}
       </div>

@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { PROJECTS, LEARNING, EXPERIENCES, ACHIEVEMENTS, DEMO_PROFILE, LINKEDIN_DEMO, atlasCompleteness } from "@/lib/demoData"
 import { DEMO_GITHUB, DEMO_REPOS } from "@/lib/demoGithub"
 import type { TechEvidence } from "@/lib/evidence"
-import { GitBranch as GithubIcon, Briefcase as LinkedinIcon, X, CheckCircle2, Loader2 } from "lucide-react"
+import { GitBranch as GithubIcon, Briefcase as LinkedinIcon, X, CheckCircle2, Loader2, GraduationCap, Award, Download, Printer, FileText } from "lucide-react"
 
 // ---------- Projects ----------
 
@@ -440,5 +440,412 @@ export function IntegrationModal({
       </div>
     </div>
   )
+}
+
+// ---------- CV Page (Company Policy Compliant) ----------
+
+export function CVView({ evidence }: { evidence: TechEvidence[] }) {
+  const [format, setFormat] = useState<"ats" | "modern" | "minimal">("ats")
+
+  const techSkills = evidence
+    .filter((e) => e.bucket !== "Weak" || e.projectNames.length > 0)
+    .map((e) => e.name)
+    .slice(0, 12)
+
+  const getTemplate = () => {
+    switch (format) {
+      case "modern": return modernTemplate
+      case "minimal": return minimalTemplate
+      default: return atsTemplate
+    }
+  }
+
+  const Template = getTemplate()
+
+  return (
+    <div className="space-y-6">
+      {/* Header controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">CV Builder</h1>
+          <p className="text-sm text-muted-foreground">
+            Generate a clean, ATS-friendly CV from your Atlas data. Templates follow common company policies.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-muted-foreground">Template:</label>
+          <select
+            value={format}
+            onChange={(e) => setFormat(e.target.value as "ats" | "modern" | "minimal")}
+            className="rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/50"
+          >
+            <option value="ats">ATS Standard — Safe for all systems</option>
+            <option value="modern">Modern — Clean with subtle styling</option>
+            <option value="minimal">Minimal — Plain text, maximum compatibility</option>
+          </select>
+          <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5">
+            <Printer className="h-3.5 w-3.5" /> Print / Save as PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => downloadTextCV(evidence)} className="gap-1.5">
+            <Download className="h-3.5 w-3.5" /> Download .txt
+          </Button>
+        </div>
+      </div>
+
+      {/* Live preview */}
+      <div className="rounded-xl border border-border bg-card shadow-elevation overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-[700px] p-8 md:p-12">
+          <Template
+            profile={DEMO_PROFILE}
+            linkedin={LINKEDIN_DEMO as typeof LINKEDIN_DEMO & { githubUrl?: string; linkedinUrl?: string }}
+            projects={PROJECTS}
+            learning={LEARNING}
+            experiences={EXPERIENCES}
+            achievements={ACHIEVEMENTS}
+            techSkills={techSkills}
+            evidence={evidence}
+          />
+        </div>
+      </div>
+
+      {/* Policy notes */}
+      <details className="rounded-xl border border-border bg-card/50 p-5 backdrop-blur">
+        <summary className="cursor-pointer font-medium flex items-center gap-2">
+          <FileText className="h-4 w-4" />
+          Company CV Policy Guidelines
+        </summary>
+        <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+          <p><strong>ATS Standard:</strong> No columns, tables, graphics, or special characters. Uses standard section headers (Experience, Education, Skills). Safe for Workday, Greenhouse, Lever, iCIMS, Taleo.</p>
+          <p><strong>Modern:</strong> Clean typography, subtle borders, single-column. Works with most modern ATS but may not parse perfectly in legacy systems.</p>
+          <p><strong>Minimal:</strong> Plain text with markdown-style structure. Maximum compatibility, zero parsing risk.</p>
+          <p>All templates use your verified evidence from the Atlas — no self-described claims without evidence backing.</p>
+        </div>
+      </details>
+    </div>
+  )
+}
+
+function downloadTextCV(evidence: TechEvidence[]) {
+  const techSkills = evidence
+    .filter((e: TechEvidence) => e.bucket !== "Weak" || e.projectNames.length > 0)
+    .map((e: TechEvidence) => e.name)
+    .slice(0, 12)
+
+  const text = buildATSCV({
+    profile: DEMO_PROFILE,
+    linkedin: LINKEDIN_DEMO,
+    projects: PROJECTS,
+    learning: LEARNING,
+    experiences: EXPERIENCES,
+    achievements: ACHIEVEMENTS,
+    techSkills,
+    evidence,
+  })
+
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `${DEMO_PROFILE.name.replace(" ", "_")}_CV.txt`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function buildATSCV({
+  profile, linkedin, projects, learning, experiences, achievements, techSkills, evidence,
+}: {
+  profile: typeof DEMO_PROFILE
+  linkedin: typeof LINKEDIN_DEMO & { githubUrl?: string; linkedinUrl?: string }
+  projects: typeof PROJECTS
+  learning: typeof LEARNING
+  experiences: typeof EXPERIENCES
+  achievements: typeof ACHIEVEMENTS
+  techSkills: string[]
+  evidence: TechEvidence[]
+}) {
+  const lines: string[] = []
+  const add = (s: string) => lines.push(s)
+  const rule = () => lines.push("".padEnd(60, "="))
+
+  add(`${profile.name.toUpperCase()}`)
+  add(`${profile.role} | ${profile.location}`)
+  add(`${linkedin.githubUrl || "github.com"} | ${linkedin.linkedinUrl || "linkedin.com"}`)
+  add(`${profile.experienceYears} year experience`)
+  rule()
+
+  add("PROFESSIONAL SUMMARY")
+  add(linkedin.about)
+  rule()
+
+  add("TECHNICAL SKILLS")
+  const skillsByStrength = new Map<string, string[]>()
+  evidence.forEach((e) => {
+    const key = e.bucket || "Developing"
+    if (!skillsByStrength.has(key)) skillsByStrength.set(key, [])
+    skillsByStrength.get(key)!.push(e.name)
+  })
+  ;["Very Strong", "Strong", "Moderate", "Developing", "Weak"].forEach((bucket) => {
+    const skills = skillsByStrength.get(bucket)
+    if (skills?.length) {
+      add(`${bucket.toUpperCase()}: ${skills.join(", ")}`)
+    }
+  })
+  if (techSkills.length) {
+    add(`CORE: ${techSkills.join(", ")}`)
+  }
+  rule()
+
+  add("EXPERIENCE")
+  experiences.forEach((exp) => {
+    add(`${exp.role} | ${exp.org} | ${exp.location}`)
+    add(exp.duration)
+    exp.responsibilities.forEach((r) => add(`- ${r}`))
+    add(`Technologies: ${exp.technologies.join(", ")}`)
+    add("")
+  })
+  rule()
+
+  add("PROJECTS")
+  projects.forEach((p) => {
+    add(`${p.name} (${p.year})`)
+    add(p.description)
+    add(`Technologies: ${p.technologies.join(", ")}`)
+    add(`Skills demonstrated: ${p.skills.join(", ")}`)
+    if (p.githubRepo) add(`Repository: ${linkedin.githubUrl}/${p.githubRepo}`)
+    add("")
+  })
+  rule()
+
+  add("EDUCATION & LEARNING")
+  learning.forEach((l) => {
+    add(`${l.title} — ${l.source} (${l.period}) [${l.status}]`)
+    add(`Technologies: ${l.technologies.join(", ")}`)
+    add("")
+  })
+  linkedin.education.forEach((e) => {
+    add(`${e.degree} — ${e.school} (${e.period})`)
+  })
+  rule()
+
+  add("ACHIEVEMENTS & CERTIFICATIONS")
+  achievements.forEach((a) => {
+    add(`${a.title} (${a.year}) — ${a.org} [${a.category}]`)
+    add(`Role: ${a.role || "N/A"} | Result: ${a.result}`)
+    add(`Technologies: ${a.technologies.join(", ")}`)
+    add("")
+  })
+  linkedin.certifications.forEach((c) => {
+    add(`${c.title} — ${c.issuer} (${c.year})`)
+  })
+  rule()
+
+  add("EVIDENCE-BASED PROFILE")
+  add("This CV is generated from verified evidence in SkillAtlas.")
+  add("Each skill is backed by projects, learning, experience, or GitHub data.")
+  add("Self-described skills without evidence are marked separately in the Atlas.")
+
+  return lines.join("\n")
+}
+
+// Template components
+function atsTemplate(props: CVProps) {
+  return (
+    <div className="font-mono text-sm leading-relaxed max-w-3xl mx-auto" style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+      <pre className="whitespace-pre-wrap font-inherit text-inherit">{buildATSCV(props)}</pre>
+    </div>
+  )
+}
+
+function modernTemplate(props: CVProps) {
+  const { profile, linkedin, projects, learning, experiences, achievements, techSkills, evidence } = props
+  const githubUrl = linkedin.githubUrl || "#"
+  const linkedinUrl = linkedin.linkedinUrl || "#"
+  return (
+    <div className="font-sans text-sm leading-relaxed max-w-3xl mx-auto">
+      <div className="mb-6 pb-4 border-b-2 border-gray-300 dark:border-gray-600">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{profile.name}</h1>
+        <p className="text-lg text-gray-600 dark:text-gray-300 mt-1">{profile.role}</p>
+        <div className="mt-2 flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
+          <span>{profile.location}</span>
+          <a href={githubUrl} target="_blank" rel="noopener" className="underline hover:text-primary">GitHub</a>
+          <a href={linkedinUrl} target="_blank" rel="noopener" className="underline hover:text-primary">LinkedIn</a>
+        </div>
+      </div>
+
+      <section className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1 mb-3">Professional Summary</h2>
+        <p className="text-gray-700 dark:text-gray-300">{linkedin.about}</p>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1 mb-3">Technical Skills</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(() => {
+            const byBucket = new Map<string, string[]>()
+            evidence.forEach((e) => {
+              const k = e.bucket || "Developing"
+              if (!byBucket.has(k)) byBucket.set(k, [])
+              byBucket.get(k)!.push(e.name)
+            })
+            return ["Very Strong", "Strong", "Moderate", "Developing"].map((b) => (
+              byBucket.has(b) && (
+                <div key={b} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <p className="font-medium text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">{b}</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{byBucket.get(b)!.join(", ")}</p>
+                </div>
+              )
+            ))
+          })()}
+        </div>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1 mb-3">Experience</h2>
+        {experiences.map((exp, i) => (
+          <div key={i} className="mb-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="font-semibold text-gray-900 dark:text-white">{exp.role}</h3>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{exp.duration}</span>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400">{exp.org} · {exp.location}</p>
+            <ul className="mt-2 space-y-1 text-sm text-gray-700 dark:text-gray-300 list-disc list-inside">
+              {exp.responsibilities.map((r, ri) => <li key={ri}>{r}</li>)}
+            </ul>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Technologies: {exp.technologies.join(", ")}</p>
+          </div>
+        ))}
+      </section>
+
+      <section className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1 mb-3">Projects</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {projects.map((p, i) => (
+            <div key={i} className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              <div className="flex items-baseline justify-between">
+                <h3 className="font-semibold text-gray-900 dark:text-white">{p.name}</h3>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{p.year}</span>
+              </div>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{p.description}</p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {p.technologies.slice(0, 5).map((t) => (
+                  <span key={t} className="px-2 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{t}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1 mb-3">Education & Learning</h2>
+        <div className="space-y-3">
+          {learning.map((l, i) => (
+            <div key={i} className="flex gap-3">
+              <div className="w-24 text-sm text-gray-500 dark:text-gray-400 shrink-0">{l.period}</div>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">{l.title}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{l.source}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Technologies: {l.technologies.join(", ")}</p>
+              </div>
+            </div>
+          ))}
+          {linkedin.education.map((e, i) => (
+            <div key={i} className="flex gap-3">
+              <div className="w-24 text-sm text-gray-500 dark:text-gray-400 shrink-0">{e.period}</div>
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">{e.degree}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{e.school}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1 mb-3">Achievements & Certifications</h2>
+        <div className="space-y-2">
+          {achievements.map((a, i) => (
+            <div key={i} className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              <p className="font-medium text-gray-900 dark:text-white">{a.title}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{a.org} · {a.year} · {a.category}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Technologies: {a.technologies.join(", ")}</p>
+            </div>
+          ))}
+          {linkedin.certifications.map((c, i) => (
+            <div key={i} className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              <p className="font-medium text-gray-900 dark:text-white">{c.title}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{c.issuer} · {c.year}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <footer className="pt-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+        <p>Generated from SkillAtlas — evidence-based technical profile.</p>
+        <p>Skills are backed by verified projects, learning, experience, and GitHub data.</p>
+      </footer>
+    </div>
+  )
+}
+
+function minimalTemplate(props: CVProps) {
+  const { profile, linkedin, projects, learning, experiences, achievements, techSkills } = props
+  const githubUrl = linkedin.githubUrl || "github.com"
+  const linkedinUrl = linkedin.linkedinUrl || "linkedin.com"
+  return (
+    <div className="font-mono text-sm leading-relaxed max-w-3xl mx-auto" style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+      <pre className="whitespace-pre-wrap font-inherit text-inherit">
+{profile.name}
+{profile.role} | {profile.location}
+{githubUrl} | {linkedinUrl}
+
+PROFESSIONAL SUMMARY
+{linkedin.about}
+
+TECHNICAL SKILLS
+{techSkills.join(", ")}
+
+EXPERIENCE
+{experiences.map((exp) => (
+  `${exp.role} | ${exp.org} | ${exp.location}
+${exp.duration}
+${exp.responsibilities.map((r) => `- ${r}`).join("\n")}
+Technologies: ${exp.technologies.join(", ")}
+`
+)).join("\n")}
+
+PROJECTS
+{projects.map((p) => (
+  `${p.name} (${p.year})
+${p.description}
+Technologies: ${p.technologies.join(", ")}
+Skills: ${p.skills.join(", ")}
+`
+)).join("\n")}
+
+EDUCATION & LEARNING
+{learning.map((l) => `${l.title} — ${l.source} (${l.period}) [${l.status}]\nTechnologies: ${l.technologies.join(", ")}`).join("\n\n")}
+{linkedin.education.map((e) => `${e.degree} — {e.school} ({e.period})`).join("\n\n")}
+
+ACHIEVEMENTS & CERTIFICATIONS
+{achievements.map((a) => `${a.title} ({a.year}) — {a.org} [{a.category}]\nResult: {a.result}\nTechnologies: {a.technologies.join(", ")}`).join("\n\n")}
+{linkedin.certifications.map((c) => `{c.title} — {c.issuer} ({c.year})`).join("\n\n")}
+
+---
+Generated from SkillAtlas. Evidence-based profile.
+      </pre>
+    </div>
+  )
+}
+
+interface CVProps {
+  profile: typeof DEMO_PROFILE
+  linkedin: typeof LINKEDIN_DEMO & { githubUrl?: string; linkedinUrl?: string }
+  projects: typeof PROJECTS
+  learning: typeof LEARNING
+  experiences: typeof EXPERIENCES
+  achievements: typeof ACHIEVEMENTS
+  techSkills: string[]
+  evidence: TechEvidence[]
 }
 
