@@ -227,6 +227,9 @@ export const LINKEDIN_DEMO = {
   name: "Alex Sharma",
   headline: "Junior Web Developer · React & JavaScript · Open to Full Stack roles",
   location: "Kathmandu, Nepal",
+  // Demo URLs — fictional profiles for the hackathon persona.
+  githubUrl: "https://github.com/alexsharma-demo",
+  linkedinUrl: "https://www.linkedin.com/in/alex-sharma-demo",
   about:
     "Junior web developer with 1 year of hands-on project experience. I enjoy building web applications with React and JavaScript, and I'm currently strengthening my backend and deployment skills. Looking for a junior full stack role where I can keep growing.",
   education: [
