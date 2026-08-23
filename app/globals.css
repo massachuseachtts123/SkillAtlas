@@ -53,6 +53,14 @@
   --evidence-moderate: #D4A72C;
   --evidence-strong: #2DD4BF;
   --evidence-very-strong: #7C6FF0;
+
+  /* Short aliases used by lib/atlas.ts's dynamic var(--ev-${slug}) lookups —
+     without these, the technology node fill (a var() with no fallback) is
+     invalid CSS and the whole background declaration drops silently. */
+  --ev-weak: var(--evidence-weak);
+  --ev-moderate: var(--evidence-moderate);
+  --ev-strong: var(--evidence-strong);
+  --ev-very-strong: var(--evidence-very-strong);
 }
 
 @layer base {
@@ -70,4 +78,51 @@
   .shadow-elevation-hover {
     box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
   }
+  .animate-progress-shimmer {
+    animation: progress-shimmer 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes progress-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+/* Core loop landing animations */
+@keyframes loop-card-in {
+  0% { opacity: 0; transform: translateY(8px); filter: blur(3px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+@keyframes loop-progress {
+  0% { width: 0; }
+  100% { width: 100%; }
+}
+@keyframes loop-bar {
+  0% { width: 0; }
+  55%, 100% { width: var(--loop-to, 72%); }
+}
+.animate-loop-card {
+  animation: loop-card-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-loop-progress {
+  animation: loop-progress 3200ms linear both;
+}
+.animate-loop-bar {
+  --loop-to: 79%;
+  animation: loop-bar 1400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-loop-card,
+  .animate-loop-progress,
+  .animate-loop-bar {
+    animation: none;
+    width: auto;
+  }
+  .animate-loop-progress { height: 100%; }
+}
+
+/* Browser surfaces in the palette, not defaults */
+::selection {
+  background: color-mix(in oklab, var(--primary) 35%, transparent);
+  color: var(--foreground);
 }
