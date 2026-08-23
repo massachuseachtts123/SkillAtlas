@@ -1,180 +1,310 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useEffect, useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
-import GraphView from "@/components/GraphView"
+import { Button } from "@/components/ui/button"
+import AtlasGraph from "@/components/AtlasGraph"
+import DetailPanel from "@/components/DetailPanel"
+import CareerView from "@/components/CareerView"
 import LoginGate from "@/components/LoginGate"
-import type { TechEvidence } from "@/lib/evidence"
-import { Zap } from "lucide-react"
+import {
+  ProjectsView, LearningView, TechnologiesView, AchievementsView,
+  ProfileView, IntegrationsView,
+} from "@/components/sections"
+import { computeEvidence } from "@/lib/evidence"
+import { CAREERS, computeAlignment, rankNextSkills, newlyUnlockedCareers } from "@/lib/careers"
+import { buildAtlas } from "@/lib/atlas"
+import { answerQuery, type SearchAnswer } from "@/lib/search"
+import { DEMO_PROFILE, PROJECTS, ACHIEVEMENTS } from "@/lib/demoData"
+import { DEMO_GITHUB } from "@/lib/demoGithub"
+import {
+  Map as MapIcon, FolderKanban, GraduationCap, Cpu, Trophy, Compass,
+  Plug, UserRound, Search, Zap, Sparkles, ArrowRight,
+} from "lucide-react"
 
-type AnalysisResult = {
-  aiUsed: boolean
-  formula: string
-  user: { name: string | null; avatar_url: string | null; public_repos: number; followers: number }
-  repos: Array<{ repo_name: string; languages: Record<string, number>; topics: string[]; stars: number }>
-  evidence: TechEvidence[]
-}
+type Tab = "atlas" | "projects" | "learning" | "technologies" | "achievements" | "career" | "integrations" | "profile"
 
-const STAGES = [
-  "Fetching public repos from GitHub…",
-  "Reading languages, topics & READMEs…",
-  "Extracting technologies (AI pass)…",
-  "Building your Technical Identity Graph…",
+const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: "atlas", label: "Atlas", icon: <MapIcon className="h-4 w-4" /> },
+  { id: "projects", label: "Projects", icon: <FolderKanban className="h-4 w-4" /> },
+  { id: "learning", label: "Learning", icon: <GraduationCap className="h-4 w-4" /> },
+  { id: "technologies", label: "Technologies", icon: <Cpu className="h-4 w-4" /> },
+  { id: "achievements", label: "Achievements", icon: <Trophy className="h-4 w-4" /> },
+  { id: "career", label: "Career", icon: <Compass className="h-4 w-4" /> },
+  { id: "integrations", label: "Integrations", icon: <Plug className="h-4 w-4" /> },
+  { id: "profile", label: "Profile", icon: <UserRound className="h-4 w-4" /> },
 ]
 
-type View = "landing" | "loading" | "graph"
+// Target career shown on the compact intelligence card + top stat strip.
+// "Junior" is a display-only prefix — the underlying weighted requirements
+// are the existing "Full Stack Developer" entry in lib/careers.ts.
+const TARGET_CAREER = CAREERS.find((c) => c.name === "Full Stack Developer") ?? CAREERS[0]
+const TARGET_CAREER_LABEL = "Junior Full Stack Developer"
 
 export default function Home() {
-  // null = still checking sessionStorage (avoids login flash on refresh)
   const [authed, setAuthed] = useState<boolean | null>(null)
-  const [view, setView] = useState<View>("landing")
-  const [username, setUsername] = useState("")
-  const [stage, setStage] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<AnalysisResult | null>(null)
-  const [insight, setInsight] = useState<string | null>(null)
-  const [insightLoading, setInsightLoading] = useState(false)
-  const usernameRef = useRef<HTMLInputElement>(null)
+
+  const [tab, setTab] = useState<Tab>("atlas")
+  const [githubConnected, setGithubConnected] = useState(false)
+  const [linkedinConnected, setLinkedinConnected] = useState(false)
+  const [simSkill, setSimSkill] = useState<string | null>(null)
+  const [careerIdx, setCareerIdx] = useState(0)
+
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [recenterKey, setRecenterKey] = useState(0)
+
+  const [query, setQuery] = useState("")
+  const [answer, setAnswer] = useState<SearchAnswer | null>(null)
 
   useEffect(() => {
     try { setAuthed(sessionStorage.getItem("skillatlas-auth") === "1") } catch { setAuthed(false) }
+    try {
+      if (sessionStorage.getItem("skillatlas-gh") === "1") setGithubConnected(true)
+      if (sessionStorage.getItem("skillatlas-li") === "1") setLinkedinConnected(true)
+    } catch { /* private mode */ }
   }, [])
 
-  useEffect(() => {
-    if (view === "landing") usernameRef.current?.focus()
-  }, [view])
+  const state = { githubConnected, linkedinConnected }
+
+  // Deterministic derivations - computed unconditionally to keep hook order stable.
+  const evidence = useMemo(() => computeEvidence(state), [githubConnected, linkedinConnected])
+  const unlockedCareers = useMemo(
+    () => (simSkill ? newlyUnlockedCareers(evidence, simSkill) : []),
+    [simSkill, evidence]
+  )
+  const { nodes, edges } = useMemo(
+    () => buildAtlas(evidence, state, simSkill, unlockedCareers),
+    [evidence, githubConnected, linkedinConnected, simSkill, unlockedCareers]
+  )
+
+  // Compact "SkillAtlas Intelligence" card — computed client-side from the same
+  // deterministic evidence/career data everywhere else in the app uses. This is
+  // the fallback the app relies on if a live Gemini call for a fuller narrative
+  // ever fails or isn't configured — the app must work without it either way.
+  const targetAlignment = useMemo(() => computeAlignment(TARGET_CAREER, evidence), [evidence])
+  const nextSkill = useMemo(() => rankNextSkills(TARGET_CAREER, evidence)[0], [evidence])
+  const strongestArea = targetAlignment.strong.length > 0
+    ? targetAlignment.strong.slice(0, 2).map((s) => s.name).join(" + ")
+    : "Just getting started"
+
+  function connectGithub() {
+    setGithubConnected(true)
+    try { sessionStorage.setItem("skillatlas-gh", "1") } catch {}
+    setTab("atlas")
+    setRecenterKey((k) => k + 1)
+  }
+  function connectLinkedin() {
+    setLinkedinConnected(true)
+    try { sessionStorage.setItem("skillatlas-li", "1") } catch {}
+    setTab("atlas")
+    setRecenterKey((k) => k + 1)
+  }
 
   if (authed !== true) {
-    if (authed === null) {
-      return <main className="min-h-screen bg-background" />
-    }
+    if (authed === null) return <main className="min-h-screen bg-background" />
     return <LoginGate onLogin={() => setAuthed(true)} />
   }
 
-  async function analyze(e?: React.FormEvent) {
+  // No marketing/landing page between login and the product — you're always
+  // looking at the real dashboard from the first frame after signing in.
+
+  function runSearch(e?: React.FormEvent) {
     e?.preventDefault()
-    if (!username.trim()) return
-    setError(null)
-    setStage(0)
-    setView("loading")
-    // Stage ticker so the wait reads as intentional work
-    const timer = setInterval(() => setStage((s) => Math.min(s + 1, STAGES.length - 1)), 2500)
-    try {
-      const res = await fetch(`/api/github?username=${encodeURIComponent(username.trim())}`, { method: "POST" })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error ?? "Analysis failed")
-      setResult(data)
-      setView("graph")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong")
-      setView("landing")
-    } finally {
-      clearInterval(timer)
-    }
+    if (!query.trim()) return
+    setAnswer(answerQuery(query.trim(), evidence))
   }
-
-  async function generateInsight(payload: object) {
-    setInsightLoading(true)
-    try {
-      const res = await fetch("/api/insight", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json()
-      setInsight(
-        res.ok && data.success
-          ? data.insight
-          : `AI summary unavailable (${
-              data.error === "no-llm-key"
-                ? "no API key configured"
-                : data.error === "llm-rate-limited"
-                  ? "free-tier rate limit hit, try again shortly"
-                  : "LLM call failed"
-            }). All scores above remain fully computed and valid.`
-      )
-    } catch {
-      setInsight("AI summary unavailable (network error). All scores above remain fully computed and valid.")
-    } finally {
-      setInsightLoading(false)
-    }
-  }
-
-  if (view === "graph" && result) {
-    return (
-      <GraphView
-        username={username.trim()}
-        user={result.user}
-        repos={result.repos}
-        evidence={result.evidence}
-        onBack={() => { setView("landing"); setResult(null); setInsight(null) }}
-        insight={insight}
-        insightLoading={insightLoading}
-        onInsight={generateInsight}
-      />
-    )
+  function goToAnswerTab(a: SearchAnswer) {
+    if (a.targetTab) setTab(a.targetTab)
+    setAnswer(null)
+    setQuery("")
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20">
-          <Zap className="h-5 w-5 text-primary" />
-        </div>
-
-        <div className="flex items-center gap-2 mb-2">
-          <Badge variant="secondary">evidence-backed</Badge>
-          <Badge variant="secondary">deterministic scoring</Badge>
-        </div>
-        <h1 className="text-4xl font-bold tracking-tighter text-balance">
-          SkillAtlas
-        </h1>
-        <p className="mt-3 text-muted-foreground leading-relaxed">
-          Turn any GitHub profile into a Technical Identity Graph and see how it aligns
-          with real career paths. Every score shows its math.
-        </p>
-
-        <form onSubmit={analyze} className="mt-8 space-y-3">
-          <label htmlFor="gh-user" className="block text-sm font-medium">
-            GitHub username
-          </label>
-          <input
-            id="gh-user"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="e.g. torvalds, octocat"
-            ref={usernameRef}
-            className="w-full rounded-lg border border-border bg-input/30 px-3 py-2.5 text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-3 focus:ring-ring/50"
-          />
-          <Button type="submit" disabled={!username.trim() || view === "loading"} className="w-full">
-            {view === "loading" ? "Analyzing…" : "Analyze"}
-          </Button>
-        </form>
-
-        {view === "loading" && (
-          <div className="mt-6">
-            {/* Indeterminate shimmer bar — pairs with the stage ticker below */}
-            <div className="h-1 rounded-full bg-secondary overflow-hidden" aria-hidden="true">
-              <div className="h-full w-1/3 rounded-full bg-primary animate-progress-shimmer" />
-            </div>
-            <ol className="mt-4 space-y-2 text-sm" aria-live="polite">
-              {STAGES.map((s, i) => (
-                <li key={s} className={`flex items-center gap-2 ${i <= stage ? "text-foreground" : "text-muted-foreground"}`}>
-                  <span className={`inline-block h-2 w-2 rounded-full ${i < stage ? "bg-primary" : i === stage ? "bg-primary animate-pulse" : "bg-muted"}`} />
-                  {s}
-                </li>
-              ))}
-            </ol>
+    <div className="flex min-h-screen bg-background text-foreground">
+      {/* Sidebar */}
+      <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-border bg-card/40 backdrop-blur md:flex">
+        <div className="flex items-center gap-3 border-b border-border p-5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/20">
+            <Zap className="h-4 w-4 text-primary" />
           </div>
-        )}
+          <span className="text-lg font-bold tracking-tight">SkillAtlas</span>
+        </div>
+        <nav aria-label="Main navigation" className="flex-1 space-y-1 overflow-y-auto p-3">
+          {TABS.map((t) => (
+            <Button
+              key={t.id}
+              variant={tab === t.id ? "secondary" : "ghost"}
+              className="w-full justify-start gap-3"
+              aria-current={tab === t.id ? "page" : undefined}
+              onClick={() => setTab(t.id)}
+            >
+              {t.icon}
+              {t.label}
+            </Button>
+          ))}
+        </nav>
+        <div className="border-t border-border p-4">
+          <p className="truncate text-sm font-medium">{DEMO_PROFILE.name}</p>
+          <p className="text-xs text-muted-foreground">{githubConnected ? DEMO_GITHUB.username : DEMO_PROFILE.role}</p>
+          <Badge variant="destructive" className="mt-2">DEMO PROFILE</Badge>
+        </div>
+      </aside>
 
-        {error && (
-          <p role="alert" className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </p>
+      {/* Main column */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Top bar */}
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card/40 px-4 backdrop-blur md:px-6">
+          {/* Mobile nav */}
+          <nav aria-label="Mobile navigation" className="flex gap-1 overflow-x-auto md:hidden">
+            {TABS.filter((t) => ["atlas", "career", "integrations"].includes(t.id)).map((t) => (
+              <Button key={t.id} size="sm" variant={tab === t.id ? "secondary" : "ghost"} onClick={() => setTab(t.id)}>
+                {t.label}
+              </Button>
+            ))}
+          </nav>
+
+          <form role="search" onSubmit={runSearch} className="relative ml-auto w-full max-w-sm">
+            <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              aria-label="Search your Atlas"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Where did I use React?"
+              className="w-full rounded-lg border border-border bg-input/30 py-1.5 pl-8 pr-3 text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-3 focus:ring-ring/50"
+            />
+            {answer && (
+              <div role="status" className="absolute right-0 top-full z-40 mt-2 w-[min(28rem,80vw)] rounded-xl border border-border bg-card p-4 shadow-elevation">
+                <p className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">{answer.question}</p>
+                <div className="space-y-1.5 text-sm leading-relaxed">
+                  {answer.lines.map((l, i) => <p key={i}>{l}</p>)}
+                </div>
+                <div className="mt-3 flex gap-2">
+                  {answer.targetTab && <Button size="sm" onClick={() => goToAnswerTab(answer)}>Open</Button>}
+                  <Button size="sm" variant="ghost" onClick={() => { setAnswer(null); setQuery("") }}>Dismiss</Button>
+                </div>
+              </div>
+            )}
+          </form>
+        </header>
+
+        {/* Content */}
+        {tab === "atlas" ? (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {/* Compact hero */}
+            <div className="shrink-0 border-b border-border px-6 py-5">
+              <h1 className="text-2xl font-bold tracking-tight">Your technical journey, mapped.</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {DEMO_PROFILE.name} · {DEMO_PROFILE.role} · Projects, learning, experience and evidence — connected in one place.
+                {simSkill && <Badge className="ml-2">SIMULATION · {simSkill}</Badge>}
+              </p>
+
+              {/* Top summary strip */}
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <StatCard label="Projects" value={PROJECTS.length} />
+                <StatCard label="Technologies" value={`${evidence.length}+`} />
+                <StatCard label="Achievements" value={ACHIEVEMENTS.length} />
+                <StatCard label="Career alignment" value={`${targetAlignment.alignmentPct}%`} />
+              </div>
+            </div>
+
+            {/* Graph + Intelligence card + detail panel */}
+            <div className="flex min-h-[560px] flex-col gap-4 p-4 lg:flex-row lg:p-6">
+              <div id="atlas-canvas" className="relative min-h-[420px] flex-1 overflow-hidden rounded-xl border border-border" aria-label="Technical identity graph">
+                <AtlasGraph
+                  nodes={nodes}
+                  edges={edges}
+                  selectedId={selectedNodeId}
+                  onSelect={setSelectedNodeId}
+                  recenterKey={recenterKey}
+                />
+                <div className="pointer-events-none absolute bottom-3 left-3 rounded-lg border border-border bg-card/90 px-3 py-1.5 text-[11px] text-muted-foreground backdrop-blur">
+                  Click any node — inner ring: skills · middle: work & learning · outer: evidence & careers
+                </div>
+              </div>
+
+              <aside className="flex w-full shrink-0 flex-col gap-4 lg:w-80">
+                <IntelligenceCard
+                  strongestArea={strongestArea}
+                  nextSkill={nextSkill?.name ?? "—"}
+                  alignmentPct={targetAlignment.alignmentPct}
+                  onExplore={() => setTab("career")}
+                />
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-border bg-card/40 p-5 backdrop-blur">
+                  <DetailPanel nodeId={selectedNodeId} evidence={evidence} state={state} onClose={() => setSelectedNodeId(null)} />
+                </div>
+              </aside>
+            </div>
+          </div>
+        ) : (
+          <main className="min-w-0 flex-1 overflow-y-auto p-6">
+            {tab === "projects" && <ProjectsView githubConnected={githubConnected} />}
+            {tab === "learning" && <LearningView />}
+            {tab === "technologies" && <TechnologiesView evidence={evidence} githubConnected={githubConnected} />}
+            {tab === "achievements" && <AchievementsView />}
+            {tab === "career" && (
+              <CareerView
+                evidence={evidence}
+                careerIdx={careerIdx}
+                onCareerChange={(i) => { setCareerIdx(i); setSimSkill(null); }}
+                simSkill={simSkill}
+                onSimChange={setSimSkill}
+              />
+            )}
+            {tab === "integrations" && (
+              <IntegrationsView state={state} onConnectGithub={connectGithub} onConnectLinkedin={connectLinkedin} />
+            )}
+            {tab === "profile" && <ProfileView />}
+          </main>
         )}
       </div>
-    </main>
+    </div>
+  )
+}
+
+function StatCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl border border-border bg-card/50 p-3 backdrop-blur">
+      <p className="text-2xl font-bold tabular-nums tracking-tight">{value}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+    </div>
+  )
+}
+
+function IntelligenceCard({
+  strongestArea, nextSkill, alignmentPct, onExplore,
+}: {
+  strongestArea: string
+  nextSkill: string
+  alignmentPct: number
+  onExplore: () => void
+}) {
+  const firstName = DEMO_PROFILE.name.split(" ")[0]
+  return (
+    <div className="rounded-xl border border-border bg-card/50 p-5 backdrop-blur">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <Sparkles className="h-4 w-4 text-primary" />
+        SkillAtlas Intelligence
+      </div>
+      <p className="mt-3 text-sm">Hello, {firstName} 👋</p>
+
+      <dl className="mt-3 space-y-2.5 text-sm">
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Strongest area</dt>
+          <dd className="font-medium">{strongestArea}</dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Next best move</dt>
+          <dd className="font-medium">{nextSkill}</dd>
+        </div>
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Career alignment</dt>
+          <dd className="font-medium">{TARGET_CAREER_LABEL} · <span className="tabular-nums">{alignmentPct}%</span></dd>
+        </div>
+      </dl>
+
+      <Button size="sm" variant="outline" className="mt-4 w-full gap-1.5" onClick={onExplore}>
+        Explore My Path <ArrowRight className="h-3.5 w-3.5" />
+      </Button>
+    </div>
   )
 }

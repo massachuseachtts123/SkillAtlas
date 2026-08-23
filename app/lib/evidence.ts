@@ -1,135 +1,126 @@
-// Deterministic evidence scoring - NEVER calls an LLM.
-// Formula (shown verbatim in UI tooltip):
-//   raw = 2*repos + recent + starBonus
-//     repos  = # repos containing the tech
-//     recent = # of those repos pushed within last 12 months
-//     starBonus = min(3, floor(log10(totalStars + 1)))
-//   Buckets: 0-2 Weak | 3-5 Moderate | 6-8 Strong | 9+ Very Strong
+// Deterministic multi-source evidence scoring - NEVER calls an LLM.
+//
+// Every technical claim gets an origin. Sources are tracked separately and
+// never silently merged:
+//   PROJECT (+2) · EXPERIENCE (+2) · ACHIEVEMENT (+1) · LEARNING (+1)
+//   GITHUB_DEMO (+1 per repo, only after demo GitHub integration)
+//   LINKEDIN_DEMO (self-described claim - capped at Moderate on its own)
+//
+// Buckets: 0–1 Weak | 2–3 Moderate | 4–6 Strong | 7+ Very Strong
 
-export type SourceTag = 'VERIFIED' | 'AI_INFERRED'
+import { PROJECTS, LEARNING, EXPERIENCES, ACHIEVEMENTS, LINKEDIN_DEMO } from "./demoData"
+import { reposForTech } from "./demoGithub"
+
+export type SourceKind =
+  | "PROJECT"
+  | "LEARNING"
+  | "EXPERIENCE"
+  | "ACHIEVEMENT"
+  | "GITHUB_DEMO"
+  | "LINKEDIN_DEMO"
 
 export type TechEvidence = {
   name: string
-  verifiedRepos: number
-  inferredRepos: number
-  recentRepos: number
-  totalStars: number
+  bucket: "Weak" | "Moderate" | "Strong" | "Very Strong"
   rawScore: number
-  bucket: 'Weak' | 'Moderate' | 'Strong' | 'Very Strong'
-  sources: SourceTag[]
+  sources: SourceKind[]
+  projectNames: string[]
+  learningTitles: string[]
+  experienceTitles: string[]
+  achievementTitles: string[]
+  githubRepoCount: number
+  githubRepos: string[]
+  linkedinClaimed: boolean
+  selfDescribedOnly: boolean
 }
 
 export const EVIDENCE_FORMULA =
-  'raw = 2×(repo count) + (recent repos ≤12mo) + min(3, ⌊log₁₀(stars+1)⌋). Buckets: 0–2 Weak · 3–5 Moderate · 6–8 Strong · 9+ Very Strong.'
+  "raw = 2×projects + 2×experience + achievements + learning + demo GitHub repos (after connect). Buckets: 0–1 Weak · 2–3 Moderate · 4–6 Strong · 7+ Very Strong. LinkedIn claims are labelled self-described and never inflate evidence alone."
 
-const TWELVE_MONTHS_MS = 365 * 24 * 60 * 60 * 1000
-
-function normalize(name: string): string {
-  // Canonicalize case-insensitively so "react" == "React"
+function norm(name: string): string {
   return name.trim().toLowerCase()
 }
 
-export function bucketFor(raw: number): TechEvidence['bucket'] {
-  if (raw <= 2) return 'Weak'
-  if (raw <= 5) return 'Moderate'
-  if (raw <= 8) return 'Strong'
-  return 'Very Strong'
+export function bucketFor(raw: number): TechEvidence["bucket"] {
+  if (raw <= 1) return "Weak"
+  if (raw <= 3) return "Moderate"
+  if (raw <= 6) return "Strong"
+  return "Very Strong"
 }
 
-type RepoRecord = {
-  repo_name: string
-  description: string | null
-  languages: Record<string, number>
-  topics: string[] | { names?: string[] }
-  stars: number
-  pushed_at: string | null
-  readme_summary: string
-  aiTechnologies?: string[] | null // null/undefined => AI pass failed or skipped
+type Entry = Omit<TechEvidence, "bucket" | "rawScore" | "sources" | "selfDescribedOnly">
+
+function newEntry(name: string): Entry {
+  return {
+    name: name.trim(),
+    projectNames: [],
+    learningTitles: [],
+    experienceTitles: [],
+    achievementTitles: [],
+    githubRepoCount: 0,
+    githubRepos: [],
+    linkedinClaimed: false,
+  }
 }
 
-export function computeEvidence(repos: RepoRecord[]): TechEvidence[] {
-  const byTech = new Map<
-    string,
-    {
-      displayName: string
-      verifiedRepoNames: Set<string>
-      inferredRepoNames: Set<string>
-      recent: Set<string>
-      starsByName: Map<string, number>
-    }
-  >()
-
-  const now = Date.now()
-
-  const getEntry = (name: string) => {
-    const key = normalize(name)
-    let e = byTech.get(key)
+export function computeEvidence(state: { githubConnected: boolean; linkedinConnected: boolean }): TechEvidence[] {
+  const byTech = new Map<string, Entry>()
+  const get = (name: string) => {
+    const k = norm(name)
+    let e = byTech.get(k)
     if (!e) {
-      e = {
-        displayName: name.trim(),
-        verifiedRepoNames: new Set(),
-        inferredRepoNames: new Set(),
-        recent: new Set(),
-        starsByName: new Map(),
-      }
-      byTech.set(key, e)
+      e = newEntry(name)
+      byTech.set(k, e)
     }
     return e
   }
 
-  for (const repo of repos) {
-    const isRecent =
-      repo.pushed_at && now - new Date(repo.pushed_at).getTime() <= TWELVE_MONTHS_MS
+  for (const p of PROJECTS)
+    for (const t of p.technologies) get(t).projectNames.push(p.name)
 
-    // VERIFIED: straight from GitHub API language stats + topics
-    for (const lang of Object.keys(repo.languages ?? {})) getEntry(lang).verifiedRepoNames.add(repo.repo_name)
-    const topics = Array.isArray(repo.topics)
-      ? repo.topics
-      : (repo.topics?.names ?? [])
-    for (const topic of topics) getEntry(topic).verifiedRepoNames.add(repo.repo_name)
+  for (const l of LEARNING)
+    for (const t of l.technologies) get(t).learningTitles.push(l.title)
 
-    // AI-INFERRED: tracked separately, never blended silently
-    if (Array.isArray(repo.aiTechnologies)) {
-      for (const t of repo.aiTechnologies) getEntry(t).inferredRepoNames.add(repo.repo_name)
-    }
+  for (const x of EXPERIENCES)
+    for (const t of x.technologies) get(t).experienceTitles.push(x.role)
 
-    // Recency/stars apply to any tech present in this repo (either source)
-    const allTechs = [
-      ...Object.keys(repo.languages ?? {}),
-      ...(Array.isArray(repo.topics) ? repo.topics : repo.topics?.names ?? []),
-      ...(Array.isArray(repo.aiTechnologies) ? repo.aiTechnologies : []),
-    ]
-    for (const t of allTechs) {
-      const e = getEntry(t)
-      if (isRecent) e.recent.add(repo.repo_name)
-      e.starsByName.set(repo.repo_name, repo.stars)
-    }
-  }
+  for (const a of ACHIEVEMENTS)
+    for (const s of a.supportsSkills) get(s).achievementTitles.push(a.title)
 
   const results: TechEvidence[] = []
   for (const [, e] of byTech) {
-    const repoUnion = new Set([...e.verifiedRepoNames, ...e.inferredRepoNames])
-    const repoCount = repoUnion.size
-    const recentCount = e.recent.size
-    const totalStars = [...e.starsByName.values()].reduce((a, b) => a + b, 0)
-    const starBonus = Math.min(3, Math.floor(Math.log10(totalStars + 1)))
-    const raw = repoCount * 2 + recentCount + starBonus
+    // Deterministic scoring
+    let raw = e.projectNames.length * 2 + e.experienceTitles.length * 2 +
+      e.achievementTitles.length + e.learningTitles.length
 
-    const sources: SourceTag[] = []
-    if (e.verifiedRepoNames.size > 0) sources.push('VERIFIED')
-    if (e.inferredRepoNames.size > 0) sources.push('AI_INFERRED')
+    if (state.githubConnected) {
+      const repos = reposForTech(e.name)
+      e.githubRepoCount = repos.length
+      e.githubRepos = repos.map((r) => r.repo_name)
+      raw += repos.length
+    }
 
-    results.push({
-      name: e.displayName,
-      verifiedRepos: e.verifiedRepoNames.size,
-      inferredRepos: e.inferredRepoNames.size,
-      recentRepos: recentCount,
-      totalStars,
-      rawScore: raw,
-      bucket: bucketFor(raw),
-      sources,
-    })
+    const sources: SourceKind[] = []
+    if (e.projectNames.length) sources.push("PROJECT")
+    if (e.learningTitles.length) sources.push("LEARNING")
+    if (e.experienceTitles.length) sources.push("EXPERIENCE")
+    if (e.achievementTitles.length) sources.push("ACHIEVEMENT")
+    if (e.githubRepoCount > 0) sources.push("GITHUB_DEMO")
+
+    // LinkedIn claims: tracked but capped - a self-described skill with no
+    // other backing stays Weak/Moderate and is flagged.
+    if (state.linkedinConnected && LINKEDIN_DEMO.claimedSkills.some((s) => norm(s) === norm(e.name))) {
+      e.linkedinClaimed = true
+      raw += 1
+      sources.push("LINKEDIN_DEMO")
+    }
+
+    const selfDescribedOnly =
+      e.linkedinClaimed && e.projectNames.length === 0 && e.experienceTitles.length === 0 &&
+      e.githubRepoCount === 0 && e.achievementTitles.length === 0
+
+    results.push({ ...e, rawScore: raw, bucket: bucketFor(raw), sources, selfDescribedOnly })
   }
 
-  return results.sort((a, b) => b.rawScore - a.rawScore)
+  return results.sort((a, b) => b.rawScore - a.rawScore || a.name.localeCompare(b.name))
 }
