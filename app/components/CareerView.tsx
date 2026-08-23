@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { ExternalLink } from "lucide-react"
 import {
   CAREERS, computeAlignment, rankNextSkills, ALIGNMENT_FORMULA, BUCKET_LEVEL,
   type CareerDef,
@@ -102,6 +103,26 @@ export default function CareerView({
                     <span className="ml-2 text-xs text-muted-foreground">effort {"●".repeat(s.effort)}{"○".repeat(3 - s.effort)}</span>
                   </p>
                   <p className="text-sm leading-relaxed text-muted-foreground">{s.reason}</p>
+                  {s.resources.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {s.resources.slice(0, 3).map((r, ri) => (
+                        <a
+                          key={ri}
+                          href={r.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background/60 px-2.5 py-1 text-xs hover:border-ring transition-colors"
+                        >
+                          <span className="hidden sm:inline">{r.title}</span>
+                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{r.type}</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ))}
+                      {s.resources.length > 3 && (
+                        <span className="text-xs text-muted-foreground">+{s.resources.length - 3} more</span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <Badge variant={strengthVariant("Strong")}>

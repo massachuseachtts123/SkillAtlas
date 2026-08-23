@@ -117,6 +117,115 @@ export const SKILL_EFFORT: Record<string, number> = {
   'React Native': 2, Flutter: 2, Kotlin: 2, Wireshark: 1,
 }
 
+// Curated free learning resources for missing/developing skills.
+// Links are stable, high-quality, no-login content (official docs, MDN, freeCodeCamp, etc.).
+export const LEARNING_RESOURCES: Record<string, { title: string; url: string; type: "docs" | "course" | "guide" }[]> = {
+  Docker: [
+    { title: "Docker Official Get Started", url: "https://docs.docker.com/get-started/", type: "docs" },
+    { title: "Docker for Beginners (freeCodeCamp, 2h)", url: "https://www.youtube.com/watch?v=pTFZFxd4hOI", type: "course" },
+  ],
+  "CI/CD": [
+    { title: "GitHub Actions Docs", url: "https://docs.github.com/en/actions", type: "docs" },
+    { title: "CI/CD with GitHub Actions (freeCodeCamp)", url: "https://www.youtube.com/watch?v=R8_veQiYBjI", type: "course" },
+  ],
+  TypeScript: [
+    { title: "TypeScript Handbook (Official)", url: "https://www.typescriptlang.org/docs/handbook/intro.html", type: "docs" },
+    { title: "TypeScript Course (freeCodeCamp, 5h)", url: "https://www.youtube.com/watch?v=gp5H0Vw39yw", type: "course" },
+  ],
+  SQL: [
+    { title: "PostgreSQL Tutorial (Official)", url: "https://www.postgresql.org/docs/current/tutorial.html", type: "docs" },
+    { title: "SQL for Data Analysis (Khan Academy)", url: "https://www.khanacademy.org/computing/computer-programming/sql", type: "course" },
+  ],
+  Kubernetes: [
+    { title: "Kubernetes Basics (Official)", url: "https://kubernetes.io/docs/tutorials/kubernetes-basics/", type: "docs" },
+    { title: "Kubernetes for Beginners (freeCodeCamp, 3h)", url: "https://www.youtube.com/watch?v=d6Avejiq7zU", type: "course" },
+  ],
+  AWS: [
+    { title: "AWS Free Tier & Getting Started", url: "https://aws.amazon.com/free/", type: "docs" },
+    { title: "AWS Cloud Practitioner (freeCodeCamp, 12h)", url: "https://www.youtube.com/watch?v=3hLmDS179YE", type: "course" },
+  ],
+  Linux: [
+    { title: "Linux Journey (Interactive)", url: "https://linuxjourney.com/", type: "guide" },
+    { title: "The Linux Command Line (Book, free)", url: "http://linuxcommand.org/tlcl.php", type: "guide" },
+  ],
+  Bash: [
+    { title: "Bash Guide (mywiki)", url: "https://mywiki.wooledge.org/BashGuide", type: "guide" },
+    { title: "Shell Scripting Tutorial (freeCodeCamp)", url: "https://www.youtube.com/watch?v=e7BufAVwDiM", type: "course" },
+  ],
+  Express: [
+    { title: "Express.js Guide (Official)", url: "https://expressjs.com/en/guide/routing.html", type: "docs" },
+    { title: "Node.js & Express Course (freeCodeCamp, 2h)", url: "https://www.youtube.com/watch?v=Oe421EPjeBE", type: "course" },
+  ],
+  PyTorch: [
+    { title: "PyTorch Tutorials (Official)", url: "https://pytorch.org/tutorials/", type: "docs" },
+    { title: "Deep Learning with PyTorch (freeCodeCamp, 4h)", url: "https://www.youtube.com/watch?v=GIsg-ZUy0MY", type: "course" },
+  ],
+  TensorFlow: [
+    { title: "TensorFlow Tutorials (Official)", url: "https://www.tensorflow.org/tutorials", type: "docs" },
+    { title: "TensorFlow 2.0 Course (freeCodeCamp, 7h)", url: "https://www.youtube.com/watch?v=tPYj3fFJGjk", type: "course" },
+  ],
+  Pandas: [
+    { title: "Pandas User Guide (Official)", url: "https://pandas.pydata.org/docs/user_guide/index.html", type: "docs" },
+    { title: "Data Analysis with Pandas (freeCodeCamp, 1h)", url: "https://www.youtube.com/watch?v=vmEHCJofslg", type: "course" },
+  ],
+  NumPy: [
+    { title: "NumPy Quickstart (Official)", url: "https://numpy.org/doc/stable/user/quickstart.html", type: "docs" },
+    { title: "NumPy Tutorial (Data School, 1h)", url: "https://www.youtube.com/watch?v=QUT1VHiLmmI", type: "course" },
+  ],
+  "scikit-learn": [
+    { title: "scikit-learn User Guide (Official)", url: "https://scikit-learn.org/stable/user_guide.html", type: "docs" },
+    { title: "Machine Learning with scikit-learn (freeCodeCamp, 3h)", url: "https://www.youtube.com/watch?v=GwIo3gDZCVQ", type: "course" },
+  ],
+  Matplotlib: [
+    { title: "Matplotlib Tutorials (Official)", url: "https://matplotlib.org/stable/tutorials/index.html", type: "docs" },
+    { title: "Data Visualization with Matplotlib (freeCodeCamp)", url: "https://www.youtube.com/watch?v=UO98lJQ3QGI", type: "course" },
+  ],
+  Playwright: [
+    { title: "Playwright Docs (Official)", url: "https://playwright.dev/docs/intro", type: "docs" },
+    { title: "Playwright Testing Course (freeCodeCamp, 2h)", url: "https://www.youtube.com/watch?v=Uu8pHG_8wjE", type: "course" },
+  ],
+  Cypress: [
+    { title: "Cypress Docs (Official)", url: "https://docs.cypress.io/", type: "docs" },
+    { title: "Cypress Testing Course (freeCodeCamp, 3h)", url: "https://www.youtube.com/watch?v=5oQZ9T8yLZM", type: "course" },
+  ],
+  Selenium: [
+    { title: "Selenium Documentation", url: "https://www.selenium.dev/documentation/", type: "docs" },
+    { title: "Selenium WebDriver with Java (freeCodeCamp, 3h)", url: "https://www.youtube.com/watch?v=Wj-IQDjTspA", type: "course" },
+  ],
+  Cryptography: [
+    { title: "Cryptography 101 (Crypto101.io, free book)", url: "https://www.crypto101.io/", type: "guide" },
+    { title: "Applied Cryptography (Coursera, free audit)", url: "https://www.coursera.org/learn/crypto", type: "course" },
+  ],
+  Spark: [
+    { title: "Spark Documentation (Official)", url: "https://spark.apache.org/docs/latest/", type: "docs" },
+    { title: "Apache Spark Tutorial (freeCodeCamp, 3h)", url: "https://www.youtube.com/watch?v=_C8kWwMvw0o", type: "course" },
+  ],
+  Airflow: [
+    { title: "Airflow Documentation (Official)", url: "https://airflow.apache.org/docs/", type: "docs" },
+    { title: "Apache Airflow Course (Astronomer Academy, free)", url: "https://academy.astronomer.io/", type: "course" },
+  ],
+  Terraform: [
+    { title: "Terraform Tutorials (Official)", url: "https://developer.hashicorp.com/terraform/tutorials", type: "docs" },
+    { title: "Terraform for Beginners (freeCodeCamp, 3h)", url: "https://www.youtube.com/watch?v=SLB_c_ayRMo", type: "course" },
+  ],
+  "React Native": [
+    { title: "React Native Docs (Official)", url: "https://reactnative.dev/docs/getting-started", type: "docs" },
+    { title: "React Native Course (freeCodeCamp, 3h)", url: "https://www.youtube.com/watch?v=Hf4MJH0jDb4", type: "course" },
+  ],
+  Flutter: [
+    { title: "Flutter Documentation (Official)", url: "https://docs.flutter.dev/", type: "docs" },
+    { title: "Flutter Course (freeCodeCamp, 4h)", url: "https://www.youtube.com/watch?v=VPvVD8t02U8", type: "course" },
+  ],
+  Kotlin: [
+    { title: "Kotlin Documentation (Official)", url: "https://kotlinlang.org/docs/home.html", type: "docs" },
+    { title: "Kotlin Bootcamp (Google, free)", url: "https://developer.android.com/courses/kotlin-bootcamp", type: "course" },
+  ],
+  Wireshark: [
+    { title: "Wireshark User Guide (Official)", url: "https://www.wireshark.org/docs/wsug_html_chunked/", type: "docs" },
+    { title: "Wireshark Tutorial (freeCodeCamp, 1h)", url: "https://www.youtube.com/watch?v=BMED9YQcObM", type: "course" },
+  ],
+}
+
 export type SkillGapEntry = { name: string; level?: number; weight?: number }
 export type CareerAlignment = {
   name: string
@@ -179,6 +288,7 @@ export type NextSkillSuggestion = {
   effort: number
   score: number
   reason: string
+  resources: { title: string; url: string; type: "docs" | "course" | "guide" }[]
 }
 
 // Deterministic next-best-skill ranking for one career. Every factor below is
@@ -232,6 +342,7 @@ export function rankNextSkills(
       effort,
       score,
       reason: `Builds on ${compat.join(", ")}. Asked for by ${CAREERS.filter((c) => c.requirements[cand]).length} careers${pathsBoosted ? `, would boost ${pathsBoosted} path${pathsBoosted > 1 ? "s" : ""} by 10+ pts` : ""}.`,
+      resources: LEARNING_RESOURCES[cand] ?? [],
     })
   }
 
